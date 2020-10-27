@@ -2,9 +2,11 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="StereoRendering.cpp" />
+    <ClCompile Include="StereoCameraController.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StereoRendering.h" />
+    <ClInclude Include="StereoCameraController.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Data">
@@ -19,6 +21,9 @@
       <Filter>Data</Filter>
     </None>
     <None Include="Data\StereoRendering.vs.hlsl">
+      <Filter>Data</Filter>
+    </None>
+    <None Include="Data\StereoTwiceRendering.vs.hlsl">
       <Filter>Data</Filter>
     </None>
   </ItemGroup>

@@ -138,6 +138,7 @@
     <None Include="Data\ReprojectionPS.slang" />
     <None Include="Data\ReprojectionRT.slang" />
     <None Include="Data\ReprojectionVS.slang" />
+    <None Include="Data\RightDepth.slang" />
     <None Include="Data\SimpleShadowPass.slang" />
     <None Include="Data\StereoVS.slang" />
     <None Include="Data\TriangleCountGS.slang" />
@@ -151,6 +152,7 @@
     <ClCompile Include="RenderPasses\GBufferRaster.cpp" />
     <ClCompile Include="RenderPasses\Lighting.cpp" />
     <ClCompile Include="RenderPasses\Reprojection.cpp" />
+    <ClCompile Include="RenderPasses\RightDepth.cpp" />
     <ClCompile Include="RenderPasses\SimpleShadowPass.cpp" />
     <ClCompile Include="RenderPasses\WarpField.cpp" />
     <ClCompile Include="RtStaticSceneRenderer.cpp" />
@@ -164,6 +166,7 @@
     <ClInclude Include="RenderPasses\GBufferRaster.h" />
     <ClInclude Include="RenderPasses\Lighting.h" />
     <ClInclude Include="RenderPasses\Reprojection.h" />
+    <ClInclude Include="RenderPasses\RightDepth.h" />
     <ClInclude Include="RenderPasses\SimpleShadowPass.h" />
     <ClInclude Include="RenderPasses\WarpField.h" />
     <ClInclude Include="RtStaticSceneRenderer.h" />

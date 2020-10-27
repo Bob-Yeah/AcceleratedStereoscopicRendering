@@ -30,7 +30,7 @@
 const std::string StereoRendering::skDefaultScene = "Arcade/Arcade.fscene";
 
 static const glm::vec4 kClearColor(0.38f, 0.52f, 0.10f, 1);
-
+uint32_t StereoRendering::gStereoTarget = 0;
 
 void StereoRendering::onGuiRender(SampleCallbacks* pSample, Gui* pGui)
 {
@@ -39,15 +39,24 @@ void StereoRendering::onGuiRender(SampleCallbacks* pSample, Gui* pGui)
         loadScene();
     }
 
+    pGui->addFloatSlider("IPD", mCamController.ipd, 0.05f, 0.08f);
+    pGui->addFloatSlider("Z0", mCamController.z0, 0.f, 20.f);
+
     //if(VRSystem::instance())
     //{
-        pGui->addCheckBox("Display VR FBO", mShowStereoViews);
+    //    pGui->addCheckBox("Display VR FBO", mShowStereoViews);
     //}
 
     if (pGui->addDropdown("Submission Mode", mSubmitModeList, (uint32_t&)mRenderMode))
     {
         setRenderMode();
     }
+
+    if (pGui->addCheckBox("Use Camera Path", mUseCameraPath))
+    {
+        applyCameraPathState();
+    }
+
 }
 
 bool displaySpsWarning()
@@ -62,6 +71,7 @@ void StereoRendering::initVR(Fbo* pTargetFbo, uint32_t width, uint32_t height)
 {
     mSubmitModeList.clear();
     mSubmitModeList.push_back({ (int)RenderMode::Mono, "Render to Screen" });
+    mSubmitModeList.push_back({ (int)RenderMode::Double, "Render Twice" });
     // Create the FBOs
     Fbo::Desc vrFboDesc;
 
@@ -135,6 +145,42 @@ void StereoRendering::submitStereo(RenderContext* pContext, Fbo::SharedPtr pTarg
     blitTexture(pContext, pTargetFbo.get(), mpRightView, pTargetFbo->getWidth() / 2);
 }
 
+void StereoRendering::renderTwice(RenderContext* pContext, Fbo::SharedPtr pTargetFbo)
+{
+    Profiler::startEvent("twice rendering1");
+    pContext->clearFbo(mpFbo.get(), kClearColor, 1.0f, 0, FboAttachmentType::All);
+    gStereoTarget = 0;
+
+    mpDoubleVars["PerImageCB"]["gStereoTarget"] = gStereoTarget;
+
+    mpGraphicsState->setProgram(mpDoubleProgram);
+    mpGraphicsState->setFbo(mpFbo);
+    pContext->setGraphicsState(mpGraphicsState);
+    pContext->setGraphicsVars(mpDoubleVars);
+    pContext->pushGraphicsState(mpGraphicsState);
+    mpSceneRenderer->renderScene(pContext);
+    mpLeftView = mpFbo->getColorTexture(0);
+    Profiler::endEvent("twice rendering1");
+
+    Profiler::startEvent("twice rendering2");
+    gStereoTarget = 1;
+    //mpGraphicsState->setFbo(mpVrFbo->getFbo());
+    pContext->clearFbo(mpFbo.get(), kClearColor, 1.0f, 0, FboAttachmentType::All);
+    
+    mpDoubleVars["PerImageCB"]["gStereoTarget"] = gStereoTarget;
+
+    mpGraphicsState->setProgram(mpDoubleProgram);
+    mpGraphicsState->setFbo(mpFbo);
+    pContext->setGraphicsState(mpGraphicsState);
+    pContext->setGraphicsVars(mpDoubleVars);
+    pContext->pushGraphicsState(mpGraphicsState);
+    mpSceneRenderer->renderScene(pContext);
+    mpRightView = mpFbo->getColorTexture(0);
+    Profiler::endEvent("twice rendering2");
+    blitTexture(pContext, pTargetFbo.get(), mpLeftView, 0);
+    blitTexture(pContext, pTargetFbo.get(), mpRightView, pTargetFbo->getWidth() / 2);
+}
+
 void StereoRendering::submitToScreen(RenderContext* pContext, Fbo::SharedPtr pTargetFbo)
 {
     PROFILE("submitScreen");
@@ -157,13 +203,6 @@ void StereoRendering::setRenderMode()
         case RenderMode::SinglePassStereo:
             mpMonoSPSProgram->addDefine("_SINGLE_PASS_STEREO");
             mpGraphicsState->toggleSinglePassStereo(true);
-            mpSceneRenderer->setCameraControllerType(SceneRenderer::CameraControllerType::SixDof);
-            break;
-        case RenderMode::Stereo:
-            mpSceneRenderer->setCameraControllerType(SceneRenderer::CameraControllerType::SixDof);
-            break;
-        case RenderMode::Mono:
-            mpSceneRenderer->setCameraControllerType(SceneRenderer::CameraControllerType::SixDof);
             break;
         }
     }
@@ -182,19 +221,45 @@ void StereoRendering::loadScene(const std::string& filename)
 {
     mpScene = Scene::loadFromFile(filename);
     mpSceneRenderer = SceneRenderer::create(mpScene);
+
     mpMonoSPSProgram = GraphicsProgram::createFromFile("StereoRendering.ps.hlsl", "", "main");
     GraphicsProgram::Desc progDesc;
     progDesc.addShaderLibrary("StereoRendering.vs.hlsl").vsEntry("main").addShaderLibrary("StereoRendering.ps.hlsl").psEntry("main").addShaderLibrary("StereoRendering.gs.hlsl").gsEntry("main");
     mpStereoProgram = GraphicsProgram::create(progDesc);
 
-    setRenderMode();
+    GraphicsProgram::Desc progDesc2;
+    progDesc2.addShaderLibrary("StereoTwiceRendering.vs.hlsl").vsEntry("main").addShaderLibrary("StereoRendering.ps.hlsl").psEntry("main");
+    mpDoubleProgram = GraphicsProgram::create(progDesc2);
+
     mpMonoSPSVars = GraphicsVars::create(mpMonoSPSProgram->getReflector());
     mpStereoVars = GraphicsVars::create(mpStereoProgram->getReflector());
+    mpDoubleVars = GraphicsVars::create(mpDoubleProgram->getReflector());
 
     for (uint32_t m = 0; m < mpScene->getModelCount(); m++)
     {
         mpScene->getModel(m)->bindSamplerToMaterials(mpTriLinearSampler);
     }
+
+}
+
+void StereoRendering::applyCameraPathState()
+{
+    if (mpScene->getPathCount())
+    {
+        if (mUseCameraPath)
+        {
+            mpScene->getPath(0)->attachObject(mpScene->getCamera(0));
+        }
+        else
+        {
+            mpScene->getPath(0)->detachObject(mpScene->getCamera(0));
+        }
+    }
+}
+
+void StereoRendering::updateValues()
+{
+    mpScene->setActiveCamera(stereoCamIndex);
 }
 
 void StereoRendering::onLoad(SampleCallbacks* pSample, RenderContext* pRenderContext)
@@ -214,19 +279,22 @@ void StereoRendering::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
     mpTriLinearSampler = Sampler::create(samplerDesc);
 
     loadScene(skDefaultScene);
+
+    Fbo::SharedPtr pFbo = pSample->getCurrentFbo();
+    mpScene->setCamerasAspectRatio(float(pFbo->getWidth()) / float(pFbo->getHeight()));
+    mCamController.attachCamera(mpScene->getActiveCamera());
+    stereoCamIndex = mpScene->addCamera(mCamController.getStereoCamera());
+
 }
 
 void StereoRendering::blitTexture(RenderContext* pContext, Fbo* pTargetFbo, Texture::SharedPtr pTexture, uint32_t xStart)
 {
-    if(mShowStereoViews)
-    {
-        uvec4 dstRect;
-        dstRect.x = xStart;
-        dstRect.y = 0;
-        dstRect.z = xStart + (pTargetFbo->getWidth() / 2);
-        dstRect.w = pTargetFbo->getHeight();
-        pContext->blit(pTexture->getSRV(0, 1, 0, 1), pTargetFbo->getRenderTargetView(0), uvec4(-1), dstRect);
-    }
+    uvec4 dstRect;
+    dstRect.x = xStart;
+    dstRect.y = 0;
+    dstRect.z = xStart + (pTargetFbo->getWidth() / 2);
+    dstRect.w = pTargetFbo->getHeight();
+    pContext->blit(pTexture->getSRV(0, 1, 0, 1), pTargetFbo->getRenderTargetView(0), uvec4(-1), dstRect);
 }
 
 void StereoRendering::onFrameRender(SampleCallbacks* pSample, RenderContext* pRenderContext, const Fbo::SharedPtr& pTargetFbo)
@@ -237,8 +305,10 @@ void StereoRendering::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
 
     if(mpSceneRenderer)
     {      
-        mpSceneRenderer->update(pSample->getCurrentTime());
-
+        //mpSceneRenderer->update(pSample->getCurrentTime());
+        updateValues();
+        mCamController.update();
+        
         switch(mRenderMode)
         {
         case RenderMode::Mono:
@@ -249,6 +319,9 @@ void StereoRendering::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
             break;
         case RenderMode::Stereo:
             submitStereo(pRenderContext, pTargetFbo, false);
+            break;
+        case RenderMode::Double:
+            renderTwice(pRenderContext, pTargetFbo);
             break;
         default:
             should_not_get_here();
@@ -276,12 +349,14 @@ bool StereoRendering::onKeyEvent(SampleCallbacks* pSample, const KeyboardEvent& 
             return true;
         //}
     }
-    return mpSceneRenderer ? mpSceneRenderer->onKeyEvent(keyEvent) : false;
+    return mCamController.onKeyEvent(keyEvent);
+    //return mpSceneRenderer ? mpSceneRenderer->onKeyEvent(keyEvent) : false;
 }
 
 bool StereoRendering::onMouseEvent(SampleCallbacks* pSample, const MouseEvent& mouseEvent)
 {
-    return mpSceneRenderer ? mpSceneRenderer->onMouseEvent(mouseEvent) : false;
+    return mCamController.onMouseEvent(mouseEvent);
+    //return mpSceneRenderer ? mpSceneRenderer->onMouseEvent(mouseEvent) : false;
 }
 
 void StereoRendering::onResizeSwapChain(SampleCallbacks* pSample, uint32_t width, uint32_t height)

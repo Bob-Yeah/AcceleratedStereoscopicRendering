@@ -25,6 +25,7 @@
 #include "RenderPasses/SimpleShadowPass.h"
 #include "RenderPasses/WarpField.h"
 #include "RenderPasses/BackwardWarping.h"
+#include "RenderPasses/RightDepth.h"
 
 const std::string DeferredRenderer::skStartupScene = "Arcade/Arcade.fscene";
 //const std::string DeferredRenderer::skStartupScene = "SimpleScene/simple.fscene";
@@ -64,6 +65,10 @@ void DeferredRenderer::onLoad(SampleCallbacks * pSample, RenderContext * pRender
     // Backward Warping
     BackwardWarping::SharedPtr pBackwardWarpingPass = BackwardWarping::create();
     mpGraph->addPass(pBackwardWarpingPass, "BackwardWarping");
+
+    // Right Depth
+    RightDepth::SharedPtr pRightDepthPass = RightDepth::create();
+    mpGraph->addPass(pRightDepthPass, "RightDepth");
 
     // Reprojection Pass (Raster and Ray Trace)
     Reprojection::SharedPtr pReprojPass = Reprojection::create();
@@ -137,7 +142,7 @@ void DeferredRenderer::onLoad(SampleCallbacks * pSample, RenderContext * pRender
 
     if (mUseWarpField)
     {
-        mpGraph->markOutput("BackwardWarping.out");
+        mpGraph->markOutput("RightDepth.depthStencil");
     }
 
     if (mUseFXAA)
@@ -530,13 +535,13 @@ void DeferredRenderer::onGuiRender(SampleCallbacks * pSample, Gui * pGui)
     {
         if (mUseWarpField)
         {
-            mpGraph->markOutput("BackwardWarping.out");
+            mpGraph->markOutput("RightDepth.depthStencil");
         }
         else
         {
-            mpGraph->unmarkOutput("BackwardWarping.out");
+            mpGraph->unmarkOutput("BRightDepth.depthStencil");
         }
-        mRightOutput = mUseWarpField ? "BackwardWarping.out" : "Reprojection.out";
+        mRightOutput = mUseWarpField ? "RightDepth.depthStencil" : "Reprojection.out";
         onClickResize();
     }
 

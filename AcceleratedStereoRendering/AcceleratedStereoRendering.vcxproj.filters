@@ -72,6 +72,9 @@
     <None Include="Data\WarpField.slang">
       <Filter>Data</Filter>
     </None>
+    <None Include="Data\RightDepth.slang">
+      <Filter>Data</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RenderPasses\DebugOutput.cpp">
@@ -102,6 +105,9 @@
       <Filter>RenderPasses</Filter>
     </ClCompile>
     <ClCompile Include="RenderPasses\WarpField.cpp">
+      <Filter>RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderPasses\RightDepth.cpp">
       <Filter>RenderPasses</Filter>
     </ClCompile>
   </ItemGroup>
@@ -137,6 +143,9 @@
       <Filter>RenderPasses</Filter>
     </ClInclude>
     <ClInclude Include="RenderPasses\WarpField.h">
+      <Filter>RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderPasses\RightDepth.h">
       <Filter>RenderPasses</Filter>
     </ClInclude>
   </ItemGroup>

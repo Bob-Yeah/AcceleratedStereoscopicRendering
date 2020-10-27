@@ -27,12 +27,14 @@
 ***************************************************************************/
 #pragma once
 #include "Falcor.h"
+#include "StereoCameraController.h"
 
 using namespace Falcor;
 
 class StereoRendering : public Renderer
 {
 public:
+    static uint32_t gStereoTarget;
     void onLoad(SampleCallbacks* pSample, RenderContext* pRenderContext) override;
     void onFrameRender(SampleCallbacks* pSample, RenderContext* pRenderContext, const Fbo::SharedPtr& pTargetFbo) override;
     void onResizeSwapChain(SampleCallbacks* pSample, uint32_t width, uint32_t height) override;
@@ -41,6 +43,9 @@ public:
     void onGuiRender(SampleCallbacks* pSample, Gui* pGui) override;
 
 private:
+    uint32_t stereoCamIndex = 0;
+    StereoCameraController mCamController;
+    bool mUseCameraPath = false;
 
     Scene::SharedPtr mpScene;
     SceneRenderer::SharedPtr mpSceneRenderer;
@@ -51,16 +56,23 @@ private:
     GraphicsProgram::SharedPtr mpStereoProgram = nullptr;
     GraphicsVars::SharedPtr mpStereoVars = nullptr;
 
+    GraphicsProgram::SharedPtr mpDoubleProgram = nullptr;
+    GraphicsVars::SharedPtr mpDoubleVars = nullptr;
+
     GraphicsState::SharedPtr mpGraphicsState = nullptr;
     Sampler::SharedPtr mpTriLinearSampler;
 
     void loadScene();
     void loadScene(const std::string & filename);
 
+    void applyCameraPathState();
+    void updateValues();
+
     enum class RenderMode
     {
         Mono,
         Stereo,
+        Double,
         SinglePassStereo
     };
 
@@ -76,10 +88,10 @@ private:
     Texture::SharedPtr mpLeftView;
     Texture::SharedPtr mpRightView;
 
-
-    bool mShowStereoViews = true;
     void submitStereo(RenderContext* pContext, Fbo::SharedPtr pTargetFbo, bool singlePassStereo);
     void setRenderMode();
+
+    void renderTwice(RenderContext* pContext, Fbo::SharedPtr pTargetFbo);
 
     static const std::string skDefaultScene;
 };
