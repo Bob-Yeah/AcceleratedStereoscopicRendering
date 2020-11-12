@@ -24,7 +24,7 @@
 
 // Override all base texture with rainbow test texture to visualize Mip-Levels
 #define _USERAINBOW 0
-#define _RTR 1
+#define _RTR 0
 
 using namespace Falcor;
 
@@ -82,8 +82,10 @@ private:
     uint32_t stereoCamIndex = 0;
 
     bool mUseFXAA = false;
-    std::string mLeftOutput = "ToneMapping_Left.dst";
-    std::string mRightOutput = "ToneMapping_Right.dst";
+    //std::string mLeftOutput = "ToneMapping_Left.dst";
+    std::string mLeftOutput = "Light.out";
+    //std::string mRightOutput = "ToneMapping_Right.dst";
+    std::string mRightOutput = "Reprojection.out";
     bool mVRrunning = false;
     bool mUseReprojection = true ;
     bool mUseWarpField = false;

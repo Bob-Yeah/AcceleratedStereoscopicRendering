@@ -30,7 +30,7 @@ const std::string DeferredRenderer::skStartupScene = "Arcade/Arcade.fscene";
 //const std::string DeferredRenderer::skStartupScene = "SimpleScene/simple.fscene";
 
 const glm::vec4 skClearColor = vec4(1.0f, 0, 0, 1.f);
-const bool initOpenVR = true; 
+const bool initOpenVR = false; 
 
 uint32_t DeferredRenderer::gStereoTarget = 0;
 float DeferredRenderer::sIpd = 0.062;
@@ -127,12 +127,14 @@ void DeferredRenderer::onLoad(SampleCallbacks * pSample, RenderContext * pRender
 
     //mpGraph->markOutput("DebugOutput.out");
 
-    mpGraph->markOutput("ToneMapping_Left.dst");
+    //mpGraph->markOutput("ToneMapping_Left.dst");
+    mpGraph->markOutput("Light.out");
 
 
     if (mUseReprojection)
     {
-        mpGraph->markOutput("ToneMapping_Right.dst");
+        //mpGraph->markOutput("ToneMapping_Right.dst");
+        mpGraph->markOutput("Reprojection.out");
     }
 
     if (mUseWarpField)
