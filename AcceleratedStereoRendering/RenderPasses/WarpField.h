@@ -21,14 +21,14 @@ public:
     void onResize(uint32_t width, uint32_t height) override;
     void setScene(const std::shared_ptr<Scene>& pScene) override;
 
-    static size_t sCameraDataOffset;
+    //static size_t sCameraDataOffset;
 
 private:
     WarpField() : RenderPass("WarpField") {}
 
     void initialize(const Dictionary& dict);
-    void updateVariableOffsets(const ProgramReflection* pReflector);
-    void setPerFrameData(const GraphicsVars* pVars);
+    //void updateVariableOffsets(const ProgramReflection* pReflector);
+    //void setPerFrameData(const GraphicsVars* pVars);
     void setDefine(std::string pName, bool flag);
 
     Scene::SharedPtr          mpScene;

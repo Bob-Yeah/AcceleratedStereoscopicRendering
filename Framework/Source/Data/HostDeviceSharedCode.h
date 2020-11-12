@@ -104,6 +104,7 @@ struct CameraData
 
     //Niko Wissmann - Custom Fields for Stereo usage
     float4x4 reprojectionMat;
+    float4x4 r2lReprojectionMat;
 
     float3   posWLeft;
     float   _padding2;

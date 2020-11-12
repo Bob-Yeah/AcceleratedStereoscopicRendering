@@ -19,21 +19,24 @@
 
 #include "DeferredRenderer.h"
 #include "RenderPasses/GBufferRaster.h"
-#include "RenderPasses/DebugOutput.h"
+//#include "RenderPasses/DebugOutput.h"
 #include "RenderPasses/Lighting.h"
 #include "RenderPasses/Reprojection.h"
 #include "RenderPasses/SimpleShadowPass.h"
-#include "RenderPasses/WarpField.h"
-#include "RenderPasses/BackwardWarping.h"
-#include "RenderPasses/RightDepth.h"
+//#include "RenderPasses/WarpField.h"
+//#include "RenderPasses/BackwardWarping.h"
+//#include "RenderPasses/RightDepth.h"
+#include "RenderPasses/RightGather.h"
+//#include "RenderPasses/ReRaster.h"
 
-const std::string DeferredRenderer::skStartupScene = "Arcade/Arcade.fscene";
+const std::string DeferredRenderer::skStartupScene = "Arcade/Arcade-teapot2.fscene";
 //const std::string DeferredRenderer::skStartupScene = "SimpleScene/simple.fscene";
 
 const glm::vec4 skClearColor = vec4(1.0f, 0, 0, 1.f);
-const bool initOpenVR = true; 
+const bool initOpenVR = false; 
 
 uint32_t DeferredRenderer::gStereoTarget = 0;
+uint32_t DeferredRenderer::gFrameIndex = 0;
 float DeferredRenderer::sIpd = 0.062;
 
 void DeferredRenderer::onLoad(SampleCallbacks * pSample, RenderContext * pRenderContext)
@@ -58,24 +61,36 @@ void DeferredRenderer::onLoad(SampleCallbacks * pSample, RenderContext * pRender
     pLightPass->mpLightCamera = pShadowPass->mpLightCamera;
     mpGraph->addPass(pLightPass, "Light");
 
-    // Warp Field
-    WarpField::SharedPtr pWarpFieldPass = WarpField::create();
-    mpGraph->addPass(pWarpFieldPass, "WarpField");
+    //// Backward Warping
+    //BackwardWarping::SharedPtr pBackwardWarpingPass = BackwardWarping::create();
+    //mpGraph->addPass(pBackwardWarpingPass, "BackwardWarping");
 
-    // Backward Warping
-    BackwardWarping::SharedPtr pBackwardWarpingPass = BackwardWarping::create();
-    mpGraph->addPass(pBackwardWarpingPass, "BackwardWarping");
-
+#if NovelMethod
+    //// Warp Field
+    //WarpField::SharedPtr pWarpFieldPass = WarpField::create();
+    //mpGraph->addPass(pWarpFieldPass, "WarpField");
     // Right Depth
-    RightDepth::SharedPtr pRightDepthPass = RightDepth::create();
-    mpGraph->addPass(pRightDepthPass, "RightDepth");
+    //RightDepth::SharedPtr pRightDepthPass = RightDepth::create();
+    //mpGraph->addPass(pRightDepthPass, "RightDepth");
 
+    RightGather::SharedPtr pRightGatherPass = RightGather::create();
+    pRightGatherPass->mpMainRenderObject = this;
+    pRightGatherPass->mpLightPass = pLightPass;
+    mpGraph->addPass(pRightGatherPass, "RightGather");
+
+    //ReRaster::SharedPtr pReRasterPass = ReRaster::create();
+    //pReRasterPass->mpMainRenderObject = this;
+    //pReRasterPass->mpLightPass = pLightPass;
+    //mpGraph->addPass(pReRasterPass, "ReRaster");
+
+
+#else
     // Reprojection Pass (Raster and Ray Trace)
     Reprojection::SharedPtr pReprojPass = Reprojection::create();
     pReprojPass->mpMainRenderObject = this;
     pReprojPass->mpLightPass = pLightPass;
     mpGraph->addPass(pReprojPass, "Reprojection");
-
+#endif
     // FXAA Pass Left
     FXAA::SharedPtr fxaaPassLeft = FXAA::create();
     mpGraph->addPass(fxaaPassLeft, "FXAA_Left");
@@ -91,16 +106,6 @@ void DeferredRenderer::onLoad(SampleCallbacks * pSample, RenderContext * pRender
     ToneMapping::SharedPtr toneMapping_right = ToneMapping::create();
     mpGraph->addPass(toneMapping_right, "ToneMapping_Right");
 
-    // Former G-Buffer Debug Pass
-    //DebugOutput::SharedPtr debugPass = DebugOutput::create();
-    //debugPass->root = this;
-    //mpGraph->addPass(debugPass, "DebugOutput");
-    //mpGraph->addEdge("GBuffer.posW", "DebugOutput.posW");
-    //mpGraph->addEdge("GBuffer.normW", "DebugOutput.normW");
-    //mpGraph->addEdge("GBuffer.diffuseOpacity", "DebugOutput.diffuseOpacity");
-    //mpGraph->addEdge("GBuffer.specRough", "DebugOutput.specRough");
-    //mpGraph->addEdge("GBuffer.depthStencil", "DebugOutput.depth");
-
     // Links for Lighting Pass
     mpGraph->addEdge("GBuffer.posW", "Light.posW");
     mpGraph->addEdge("GBuffer.normW", "Light.normW");
@@ -108,41 +113,57 @@ void DeferredRenderer::onLoad(SampleCallbacks * pSample, RenderContext * pRender
     mpGraph->addEdge("GBuffer.specRough", "Light.specRough");
     mpGraph->addEdge("SimpleShadowPass.depthStencil", "Light.shadowDepth");
 
+#if NovelMethod
+    // Links for RightGather Pass
+    mpGraph->addEdge("GBuffer.depthStencil", "RightGather.leftDepth");
+    mpGraph->addEdge("Light.out", "RightGather.leftIn");
+    //mpGraph->addEdge("RightDepth.depthStencil", "RightGather.rightDepth");
+    mpGraph->addEdge("SimpleShadowPass.depthStencil", "RightGather.shadowDepth");
+#else
     // Links for Reprojection Pass
     mpGraph->addEdge("GBuffer.depthStencil", "Reprojection.depth");
     mpGraph->addEdge("GBuffer.normW", "Reprojection.gbufferNormal");
     mpGraph->addEdge("GBuffer.posW", "Reprojection.gbufferPosition");
     mpGraph->addEdge("Light.out", "Reprojection.leftIn");
     mpGraph->addEdge("SimpleShadowPass.depthStencil", "Reprojection.shadowDepth");
+#endif
 
-    // FXAA Links (left and right)
-    mpGraph->addEdge("Light.out", "FXAA_Left.src");
-    mpGraph->addEdge("Reprojection.out", "FXAA_Right.src");
+#if NovelMethod // TODO：新的右边视角生成
+    mpGraph->addEdge("Light.out", "ToneMapping_Left.src");
+    mpGraph->addEdge("RightGather.out", "ToneMapping_Right.src");
+    //mpGraph->addEdge("RightGather.depthStencil", "ReRaster.reRasterDepthStencil");
+    //mpGraph->addEdge("RightGather.out", "ReRaster.rightResultWithHoles");
+    //mpGraph->addEdge("SimpleShadowPass.depthStencil", "ReRaster.shadowDepth");
+    //mpGraph->addEdge("ReRaster.rightResultWithHoles", "ToneMapping_Right.src");
 
+#else
     // Tone Mapping
     mpGraph->addEdge("Light.out", "ToneMapping_Left.src");
-    mpGraph->addEdge("Reprojection.out", "ToneMapping_Right.src");
+    mpGraph->addEdge("Reprojection.out", "ToneMapping_Right.src"); 
+#endif
 
-    // Warp Field
-    mpGraph->addEdge("GBuffer.depthStencil", "WarpField.depth");
-
-    // Backward Warping
-    mpGraph->addEdge("WarpField.WF", "BackwardWarping.Vs");
-    mpGraph->addEdge("Light.out", "BackwardWarping.leftIn");
+    // FXAA Links (left and right)
+    mpGraph->addEdge("ToneMapping_Left.dst", "FXAA_Left.src");
+    mpGraph->addEdge("ToneMapping_Right.dst", "FXAA_Right.src");
 
     //mpGraph->markOutput("DebugOutput.out");
 
-    mpGraph->markOutput("ToneMapping_Left.dst");
-
+    //mpGraph->markOutput("ToneMapping_Left.dst");
+    //Debug
+    mpGraph->markOutput("Light.out");
+    //mpGraph->markOutput("GBuffer.posW");
 
     if (mUseReprojection)
     {
-        mpGraph->markOutput("ToneMapping_Right.dst");
-    }
+#if NovelMethod
+        mpGraph->markOutput("RightGather.out");
+#else
+        mpGraph->markOutput("Reprojection.out");
+#endif
 
-    if (mUseWarpField)
-    {
-        mpGraph->markOutput("RightDepth.depthStencil");
+        //mpGraph->markOutput("ToneMapping_Right.dst");
+        
+        //mpGraph->markOutput("RightGather.depthStencil");
     }
 
     if (mUseFXAA)
@@ -171,6 +192,13 @@ void DeferredRenderer::onLoad(SampleCallbacks * pSample, RenderContext * pRender
 
 void DeferredRenderer::onFrameRender(SampleCallbacks * pSample, RenderContext * pRenderContext, const Fbo::SharedPtr & pTargetFbo)
 {
+    if (gFrameIndex == 0) {
+        gFrameIndex = 1;
+    }
+    else {
+        gFrameIndex = 0;
+    }
+
     if (mMeasurementRunning)
     {
         if (mFrameCount >= _PROFILING_LOG_BATCH_SIZE)
@@ -322,6 +350,7 @@ void DeferredRenderer::renderToScreenReprojected(SampleCallbacks * pSample, Rend
         {
         case DeferredRenderer::Both:
         {
+            //uvec4 rectSrc = uvec4(pSample->getCurrentFbo()->getWidth() / 8, pSample->getCurrentFbo()->getHeight()/4, pSample->getCurrentFbo()->getWidth() * 0.625f, pSample->getCurrentFbo()->getHeight()*0.75;
             uvec4 rectSrc = uvec4(pSample->getCurrentFbo()->getWidth() / 4, 0, pSample->getCurrentFbo()->getWidth() * 0.75f, pSample->getCurrentFbo()->getHeight());
             uvec4 leftRectDst = uvec4(0, 0, pSample->getCurrentFbo()->getWidth() / 2, pSample->getCurrentFbo()->getHeight());
             pRenderContext->blit(mpGraph->getOutput(mLeftOutput)->getSRV(), pTargetFbo->getRenderTargetView(0), mCropOutput ? rectSrc : glm::uvec4(-1), leftRectDst);
@@ -521,29 +550,33 @@ void DeferredRenderer::onGuiRender(SampleCallbacks * pSample, Gui * pGui)
     {
         if (mUseReprojection)
         {
-            mpGraph->markOutput("Reprojection.out");
+            mpGraph->markOutput("ToneMapping_Right.dst");
         }
         else
         {
-            mpGraph->unmarkOutput("Reprojection.out");
+            mpGraph->unmarkOutput("ToneMapping_Right.dst");
         }
 
         onClickResize();
     }
 
-    if (pGui->addCheckBox("WarpField Pass", mUseWarpField))
-    {
-        if (mUseWarpField)
-        {
-            mpGraph->markOutput("RightDepth.depthStencil");
-        }
-        else
-        {
-            mpGraph->unmarkOutput("BRightDepth.depthStencil");
-        }
-        mRightOutput = mUseWarpField ? "RightDepth.depthStencil" : "Reprojection.out";
-        onClickResize();
-    }
+    //if (pGui->addCheckBox("Show Right Eye Depth", mShowRightDepth))
+    //{
+    //    if (mShowRightDepth)
+    //    {
+    //        mpGraph->markOutput("RightDepth.depthStencil");
+    //    }
+    //    else
+    //    {
+    //        mpGraph->unmarkOutput("RightDepth.depthStencil");
+    //    }
+
+    //    mRightOutput = mShowRightDepth ? "RightDepth.depthStencil" : "RightGather.out";
+
+    //    onClickResize();
+    //}
+
+
 
     Gui::DropdownList renderModeList;
     renderModeList.push_back({ 1, "Render To Screen" });
@@ -588,8 +621,8 @@ void DeferredRenderer::onGuiRender(SampleCallbacks * pSample, Gui * pGui)
             mpGraph->unmarkOutput("FXAA_Right.dst");
         }
 
-        mLeftOutput = mUseFXAA ? "FXAA_Left.dst" : "Light.out";
-        mRightOutput = mUseFXAA ? "FXAA_Right.dst" : "Reprojection.out";
+        mLeftOutput = mUseFXAA ? "FXAA_Left.dst" : "ToneMapping_Left.dst";
+        mRightOutput = mUseFXAA ? "FXAA_Right.dst" : "ToneMapping_Right.dst";
 
         onClickResize();
     }

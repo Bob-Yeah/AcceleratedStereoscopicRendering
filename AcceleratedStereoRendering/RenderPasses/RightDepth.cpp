@@ -1,20 +1,5 @@
 #include "Framework.h"
 #include "RightDepth.h"
-#include "../DeferredRenderer.h"
-
-namespace
-{
-    const std::string kFileRasterPrimary = "RightDepth.slang";
-    const std::string kDepthFormat = "depthFormat";
-}
-
-static const Gui::DropdownList kDepthFormats =
-{
-    {(uint32_t)ResourceFormat::D16Unorm, "D16Unorm"},
-    {(uint32_t)ResourceFormat::D32Float, "D32Float"},
-    {(uint32_t)ResourceFormat::D24UnormS8, "D24UnormS8"},
-    {(uint32_t)ResourceFormat::D32FloatS8X24, "D32FloatS8X24"}
-};
 
 RenderPassReflection RightDepth::reflect() const
 {
@@ -34,26 +19,37 @@ Dictionary RightDepth::getScriptingDictionary() const
     return Dictionary();
 }
 
-RightDepth::RightDepth() : RenderPass("RightDepth")
+void RightDepth::initialize(const RenderData* pRenderData)
 {
-    mpGraphicsState = GraphicsState::create();
-    
-    GraphicsProgram::Desc progDesc;
-    progDesc.addShaderLibrary("RightDepth.slang").psEntry("main");
-    mpProgram = GraphicsProgram::create(progDesc);
 
-    mpVars = GraphicsVars::create(mpProgram->getReflector());
-    mpGraphicsState->setProgram(mpProgram);
-    mpFbo = Fbo::create();
+    // DepthPrePass
+    GraphicsProgram::Desc preDepthProgDesc;
+    preDepthProgDesc
+        .addShaderLibrary("StereoVS.slang").vsEntry("main")
+        .addShaderLibrary("RightDepth.slang").psEntry("main");
+    mpPreDepthFbo = Fbo::create();
+    //Fbo::Desc lowFboDesc;
+    //lowFboDesc.
+    //    setColorTarget(0, mpPreDepthFbo->getColorTexture(0)->getFormat()).
+    //    setDepthStencilTarget(mpPreDepthFbo->getDepthStencilTexture()->getFormat());
+
+    //mpLowPreDepthFbo = FboHelper::create2D(mpPreDepthFbo->getWidth()/2, mpPreDepthFbo->getHeight() / 2, lowFboDesc);
+
+    mpPreDepthProgram = GraphicsProgram::create(preDepthProgDesc);
+    mpPreDepthVars = GraphicsVars::create(mpPreDepthProgram->getReflector());
+    mpPreDepthGraphicsState = GraphicsState::create();
+    mpPreDepthGraphicsState->setProgram(mpPreDepthProgram);
+    mIsInitialized = true;
 }
 
 void RightDepth::onResize(uint32_t width, uint32_t height)
 {
+    
 }
 
 void RightDepth::setScene(const std::shared_ptr<Scene>& pScene)
 {
-    mpSceneRenderer = (pScene == nullptr) ? nullptr : SceneRenderer::create(pScene);
+    mpPreDepthRenderer = (pScene == nullptr) ? nullptr : SceneRenderer::create(pScene);
 }
 
 void RightDepth::renderUI(Gui* pGui, const char* uiGroup)
@@ -63,18 +59,23 @@ void RightDepth::renderUI(Gui* pGui, const char* uiGroup)
 
 void RightDepth::execute(RenderContext* pContext, const RenderData* pRenderData)
 {
-    if (mpSceneRenderer == nullptr)
+    if (mpPreDepthRenderer == nullptr)
     {
         logWarning("Invalid SceneRenderer in GBufferRaster::execute()");
         return;
     }
-    const auto& pDepth = pRenderData->getTexture("depthStencil");
-    mpFbo->attachDepthStencilTarget(pDepth);
-    mpGraphicsState->setFbo(mpFbo);
+    if (!mIsInitialized) initialize(pRenderData);
 
+    mpPreDepthVars["PerImageCB"]["gStereoTarget"] = (uint32_t)1;
+    const auto& pDepth = pRenderData->getTexture("depthStencil");
+    //logWarning("pDepth width, height:" + std::to_string(pDepth->getWidth()) +","+  std::to_string(pDepth->getHeight()));
+    //Texture::SharedPtr pLowDepth = Texture::create2D(pDepth->getWidth()/2, pDepth->getHeight()/2, pDepth->getFormat(),1,1,(const void*)nullptr,Resource::BindFlags::DepthStencil);
+    //logWarning("pDepth width, height:" + std::to_string(pLowDepth->getWidth()) + "," + std::to_string(pLowDepth->getHeight()));
+    mpPreDepthFbo->attachDepthStencilTarget(pDepth);
+    mpPreDepthGraphicsState->setFbo(mpPreDepthFbo);
     pContext->clearDsv(pDepth->getDSV().get(), 1, 0);
-    
-    pContext->setGraphicsState(mpGraphicsState);
-    pContext->setGraphicsVars(mpVars);
-    mpSceneRenderer->renderScene(pContext);
+    pContext->setGraphicsState(mpPreDepthGraphicsState);
+    pContext->setGraphicsVars(mpPreDepthVars);
+    mpPreDepthRenderer->renderScene(pContext);
+    //pContext->blit(pLowDepth->getSRV(), pDepth->getRTV());
 }

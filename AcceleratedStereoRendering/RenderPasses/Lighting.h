@@ -61,6 +61,7 @@ private:
     SkyBox::SharedPtr         mpSkyBox;
 
     Fbo::SharedPtr              mpFbo;
+    Fbo::SharedPtr              mpLowFbo;
     GraphicsVars::SharedPtr     mpVars;
     GraphicsState::SharedPtr    mpState;
     FullScreenPass::UniquePtr   mpPass;

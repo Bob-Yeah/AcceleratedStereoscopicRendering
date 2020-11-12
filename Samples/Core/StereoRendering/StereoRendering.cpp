@@ -184,6 +184,7 @@ void StereoRendering::renderTwice(RenderContext* pContext, Fbo::SharedPtr pTarge
 void StereoRendering::submitToScreen(RenderContext* pContext, Fbo::SharedPtr pTargetFbo)
 {
     PROFILE("submitScreen");
+    pContext->clearFbo(pTargetFbo.get(), kClearColor, 1.0f, 0, FboAttachmentType::All);
     mpGraphicsState->setProgram(mpMonoSPSProgram);
     mpGraphicsState->setFbo(pTargetFbo);
     pContext->setGraphicsState(mpGraphicsState);

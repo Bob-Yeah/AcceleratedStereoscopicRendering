@@ -24,7 +24,11 @@
 
 // Override all base texture with rainbow test texture to visualize Mip-Levels
 #define _USERAINBOW 0
-#define _RTR 1
+#define _RTR 0
+
+#define NovelMethod 1
+
+#define _DEBUG_LOG 1
 
 using namespace Falcor;
 
@@ -37,6 +41,7 @@ public:
 
     static float sIpd;
 
+    static uint32_t gFrameIndex;
     void onLoad(SampleCallbacks* pSample, RenderContext* pRenderContext) override;
     void onFrameRender(SampleCallbacks* pSample, RenderContext* pRenderContext, const Fbo::SharedPtr& pTargetFbo) override;
     void onShutdown(SampleCallbacks* pSample) override;
@@ -72,23 +77,37 @@ private:
 
     SampleCallbacks* mpSample;
     RenderGraph::SharedPtr mpGraph;
+
     StereoCameraController mCamController;
     HmdCameraController mHMDCamController;
     bool mbAltPressed = false;
     Fbo::SharedPtr mpHMDFbo;
+
+    Fbo::SharedPtr mpLowFbo;
+    float lowScaleFactor = 0.5; //0-1
+
     VRSystem* mpVrSystem;
     Texture::SharedPtr mpRainbowTex;
 
     uint32_t stereoCamIndex = 0;
 
     bool mUseFXAA = false;
-    std::string mLeftOutput = "ToneMapping_Left.dst";
-    std::string mRightOutput = "ToneMapping_Right.dst";
+    //std::string mLeftOutput = "ToneMapping_Left.dst";
+    //debug
+    std::string mLeftOutput = "Light.out";
+    //std::string mLeftOutput = "GBuffer.posW";
+    //std::string mRightOutput = "ToneMapping_Right.dst";
+    //debug
+#if NovelMethod
+    std::string mRightOutput = "RightGather.out";
+#else
+    std::string mRightOutput = "Reprojection.out";
+#endif
     bool mVRrunning = false;
-    bool mUseReprojection = true ;
-    bool mUseWarpField = false;
+    bool mUseReprojection = true;
     bool mCropOutput = false;
     bool mUseCameraPath = false;
+    bool mShowRightDepth = false;
 
     void loadScene(SampleCallbacks* pSample, const std::string& filename);
     void updateValues();

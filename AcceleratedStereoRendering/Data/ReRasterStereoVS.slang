@@ -10,6 +10,7 @@ cbuffer PerImageCB
     uint gStereoTarget;
 };
 
+[earlydepthstencil]
 VertexOut main(VertexIn vIn)
 {
     VertexOut vOut;

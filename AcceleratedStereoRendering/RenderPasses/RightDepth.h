@@ -19,14 +19,16 @@ public:
     std::string getDesc(void) override { return "Depth PrePass"; }
 
 private:
-    RightDepth();
+    RightDepth() : RenderPass("RightDepth") {}
+    void initialize(const RenderData* pRenderData);
+    // Depth Pass
+    SceneRenderer::SharedPtr                mpPreDepthRenderer;
+    Fbo::SharedPtr                          mpPreDepthFbo;
+    Fbo::SharedPtr                          mpLowPreDepthFbo;
+    GraphicsProgram::SharedPtr              mpPreDepthProgram;
+    GraphicsVars::SharedPtr                 mpPreDepthVars;
+    GraphicsState::SharedPtr                mpPreDepthGraphicsState;
+    Scene::SharedPtr                        mpScene;
 
-    GraphicsState::SharedPtr                mpGraphicsState;
-    GraphicsProgram::SharedPtr              mpProgram;
-    GraphicsVars::SharedPtr                 mpVars;
-    SceneRenderer::SharedPtr                mpSceneRenderer;
-    Fbo::SharedPtr                          mpFbo;
-    RasterizerState::SharedPtr              mpRsState;
-    ResourceFormat                          mDepthFormat = ResourceFormat::D32Float;
-
+    bool mIsInitialized = false;
 };

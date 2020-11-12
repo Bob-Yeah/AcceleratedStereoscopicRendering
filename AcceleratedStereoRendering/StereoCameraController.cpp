@@ -19,6 +19,8 @@
 
 #include "StereoCameraController.h"
 #include "Utils/Math/FalcorMath.h"
+#include "glm/gtx/string_cast.hpp"
+
 
 bool StereoCameraController::onMouseEvent(const MouseEvent & mouseEvent)
 {
@@ -192,15 +194,38 @@ Camera::SharedPtr StereoCameraController::getStereoCamera()
 inline void StereoCameraController::calcStereoParams()
 {
     fovrad = focalLengthToFovY(mpMonoCam->getFocalLength(), mpMonoCam->getFrameHeight());
+    
     top = mpMonoCam->getNearPlane() * glm::tan(fovrad / 2.f);
+#ifdef _DEBUG_LOG
+    logWarning("top:" + std::to_string(top));
+#endif
     bottom = -top;
     right = mpMonoCam->getAspectRatio() * top;
-    left = -right;
-    offset = ipd / 2.f*(mpMonoCam->getNearPlane() / z0);
 
+    left = -right;
+#ifdef _DEBUG_LOG
+    logWarning("left:" + std::to_string(left));
+#endif
+    offset = ipd / 2.f*(mpMonoCam->getNearPlane() / z0);
+#ifdef _DEBUG_LOG
+    logWarning("offset:" + std::to_string(offset));
+#endif
+    //offset = ipd / 2.f;
+    // 
     projectionMatLeft = glm::frustum(left + offset, right + offset, bottom, top, mpMonoCam->getNearPlane(), mpMonoCam->getFarPlane());
+#ifdef _DEBUG_LOG
+    logWarning("projectionMatLeft:" + glm::to_string(projectionMatLeft));
+#endif
+    // -0.105545, 0.102445
     projectionMatRight = glm::frustum(left - offset, right - offset, bottom, top, mpMonoCam->getNearPlane(), mpMonoCam->getFarPlane());
+#ifdef _DEBUG_LOG
+    logWarning("projectionMatRight:" + glm::to_string(projectionMatRight));
+#endif
     viewMatLeft = glm::translate(glm::mat4(), glm::vec3(ipd / 2.f, 0, 0)) * mpMonoCam->getViewMatrix();
+#ifdef _DEBUG_LOG
+    logWarning("getViewMatrix:" + glm::to_string(mpMonoCam->getViewMatrix()));
+    logWarning("viewMatLeft:" + glm::to_string(viewMatLeft));
+#endif
     viewMatRight = glm::translate(glm::mat4(), glm::vec3(-ipd / 2.f, 0, 0)) * mpMonoCam->getViewMatrix();
 
     mpCamera->setProjectionMatrix(projectionMatLeft);

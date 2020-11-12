@@ -52,6 +52,7 @@ private:
     Scene::SharedPtr                        mpScene;
     SceneRenderer::SharedPtr                mpSceneRenderer;
     Fbo::SharedPtr                          mpFbo;
+    Fbo::SharedPtr                          mpLowFbo;
 
     glm::mat4                               mShadowMat;
     float                                   mAABRadiusPadding = 0;

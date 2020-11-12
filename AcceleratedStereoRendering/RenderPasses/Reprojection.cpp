@@ -144,8 +144,13 @@ void Reprojection::initialize(const RenderData * pRenderData)
     dsDesc.setDepthFunc(DepthStencilState::Func::Less);
     dsDesc.setStencilTest(true);
     dsDesc.setStencilWriteMask(1);
+    // ref & readMask (stencil func -- LE) value(already in the stencil buffer) & readmask
     dsDesc.setStencilRef(0);
+    // write 
     dsDesc.setStencilFunc(DepthStencilState::Face::Front, DepthStencilState::Func::LessEqual);
+    // stencil fail:Keep
+    // stencil pass and depth fail:Keep
+    // stencil pass and depth pass:Increase
     dsDesc.setStencilOp(DepthStencilState::Face::Front, DepthStencilState::StencilOp::Keep, DepthStencilState::StencilOp::Keep, DepthStencilState::StencilOp::Increase);
     mpDepthTestDS = DepthStencilState::create(dsDesc);
     mpState->setDepthStencilState(mpDepthTestDS);
@@ -161,7 +166,7 @@ void Reprojection::initialize(const RenderData * pRenderData)
     GraphicsProgram::Desc reRasterProgDesc;
     reRasterProgDesc
         .addShaderLibrary("StereoVS.slang").vsEntry("main")
-        .addShaderLibrary("RasterPrimary.slang").psEntry("main");
+        .addShaderLibrary("RasterPrimarySimple.slang").psEntry("main");
 
     mpReRasterProgram = GraphicsProgram::create(reRasterProgDesc);
     mpReRasterVars = GraphicsVars::create(mpReRasterProgram->getReflector());
@@ -177,11 +182,18 @@ void Reprojection::initialize(const RenderData * pRenderData)
     // Depth Stencil State
     DepthStencilState::Desc reDepthStencilState;
     reDepthStencilState.setDepthTest(true);
+    //reDepthStencilState.setDepthFunc(DepthStencilState::Func::Less);
     reDepthStencilState.setStencilTest(true);
-    reDepthStencilState.setStencilReadMask(1);
-    reDepthStencilState.setStencilWriteMask(2);
-    reDepthStencilState.setStencilRef(0);
+    reDepthStencilState.setStencilReadMask(1); // readmask
+    reDepthStencilState.setStencilWriteMask(2); // writemask
+    reDepthStencilState.setStencilRef(0); //ref
+    // ref & readMask 1 (stencil func-Equal) value(already in the stencil buffer) & readmask 1
+    // never always equal le gr notequal ge 
     reDepthStencilState.setStencilFunc(DepthStencilState::Face::Front, DepthStencilState::Func::Equal);
+    // stencil op:
+    // stencil fail:Increase
+    // stencil pass and depth fail:Increase
+    // stencil pass and depth pass:Increase
     reDepthStencilState.setStencilOp(DepthStencilState::Face::Front, DepthStencilState::StencilOp::Increase, DepthStencilState::StencilOp::Increase, DepthStencilState::StencilOp::Increase);
     DepthStencilState::SharedPtr reRasterDepthStencil = DepthStencilState::create(reDepthStencilState);
     mpReRasterGraphicsState->setDepthStencilState(reRasterDepthStencil);
@@ -376,8 +388,11 @@ inline void Reprojection::fillHolesRaster(RenderContext * pContext, const Render
     Profiler::startEvent("fillholes_raster");
 
     // G-Buffer with Stencil Mask
+    //mpReRasterFbo->attachColorTarget(pTexture, 0);
     mpReRasterFbo->attachDepthStencilTarget(pRenderData->getTexture("internalDepth"));
     pContext->clearFbo(mpReRasterFbo.get(), vec4(0), 1.f, 0, FboAttachmentType::Color | FboAttachmentType::Depth);
+    //pContext->clearFbo(mpReRasterFbo.get(), vec4(0), 1.f, 0, FboAttachmentType::All);
+
     mpReRasterVars["PerImageCB"]["gStereoTarget"] = (uint32_t)1;
     mpReRasterGraphicsState->setFbo(mpReRasterFbo);
     pContext->setGraphicsState(mpReRasterGraphicsState);
@@ -391,6 +406,9 @@ inline void Reprojection::fillHolesRaster(RenderContext * pContext, const Render
     {
         pContext->clearFbo(mpReRasterLightingFbo.get(), vec4(0), 1.f, 0, FboAttachmentType::Color | FboAttachmentType::Depth);
     }
+
+    //pContext->clearFbo(mpReRasterLightingFbo.get(), vec4(0), 1.f, 0, FboAttachmentType::Color);
+
     updateVariableOffsets(pContext->getGraphicsVars()->getReflection().get());
     setPerFrameData(mpReRasterLightingVars.get());
 

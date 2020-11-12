@@ -138,6 +138,7 @@ namespace Falcor
 
             // Reprojection Warp Matrix
             mData.reprojectionMat = mData.rightEyeViewProjMat * mData.invViewProj;
+            mData.r2lReprojectionMat = mData.viewProjMat * glm::inverse(mData.rightEyeViewProjMat);
 
             // Custom Field Calculation for correct(!) stereo Rendering
             glm::mat4 invViewLeft = glm::inverse(mData.viewMat);

@@ -1,4 +1,7 @@
-void main(float2 texC : TEXCOORD, float4 pos : SV_Position) : SV_Target
+import DefaultVS;
+import ShaderCommon;
+import Shading;
+void main(VertexOut vOut)
 {
-
+    //prepareShadingData(vOut, gMaterial, gCamera.posW);
 }

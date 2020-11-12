@@ -85,7 +85,7 @@ GBufferRaster::GBufferRaster() : RenderPass("GBufferRaster")
     mpGraphicsState = GraphicsState::create();
 
     GraphicsProgram::Desc progDesc;
-    progDesc.addShaderLibrary("StereoVS.slang").vsEntry("main").addShaderLibrary("RasterPrimary.slang").psEntry("main");
+    progDesc.addShaderLibrary("StereoVS.slang").vsEntry("main").addShaderLibrary("RasterPrimarySimple.slang").psEntry("main");
     mRaster.pProgram = GraphicsProgram::create(progDesc);
 
     // Initialize graphics state
@@ -98,6 +98,7 @@ GBufferRaster::GBufferRaster() : RenderPass("GBufferRaster")
     mRaster.pState->setProgram(mRaster.pProgram);
 
     mpFbo = Fbo::create();
+    mpLowFbo = Fbo::create();
 }
 
 void GBufferRaster::onResize(uint32_t width, uint32_t height)

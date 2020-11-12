@@ -38,6 +38,7 @@ SimpleShadowPass::SimpleShadowPass() : RenderPass("SimpleShadowPass")
     mRaster.pState->setRasterizerState(RasterizerState::create(rsDesc));
 
     mpFbo = Fbo::create();
+    mpLowFbo = Fbo::create();
 }
 
 RenderPassReflection SimpleShadowPass::reflect() const

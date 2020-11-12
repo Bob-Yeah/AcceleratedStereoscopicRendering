@@ -30,6 +30,10 @@
  * Modified by: Niko Wissmann
  */
 
+ /*
+  * Modified by: Jiannan Ye
+  */
+
 #pragma once
 #include "Falcor.h"
 
@@ -57,6 +61,7 @@ private:
     GraphicsState::SharedPtr                mpGraphicsState;
     SceneRenderer::SharedPtr                mpSceneRenderer;
     Fbo::SharedPtr                          mpFbo;
+    Fbo::SharedPtr                          mpLowFbo;
     RasterizerState::CullMode               mCullMode = RasterizerState::CullMode::Back;
 
     // Rasterization resources
