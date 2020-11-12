@@ -132,6 +132,7 @@
     <None Include="Data\DepthInVS.slang" />
     <None Include="Data\HoleCountCompute.slang" />
     <None Include="Data\Lighting.slang" />
+    <None Include="Data\LightingFor2Pass.slang" />
     <None Include="Data\QuadLevelCompute.slang" />
     <None Include="Data\RasterPrimarySimple.slang" />
     <None Include="Data\ReLighting.slang" />

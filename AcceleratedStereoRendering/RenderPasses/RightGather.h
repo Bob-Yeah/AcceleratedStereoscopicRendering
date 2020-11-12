@@ -55,11 +55,11 @@ private:
     glm::vec3                               mClearColor = glm::vec3(0, 0, 0);
 
     // Re-Raster G-Buffer
-    SceneRenderer::SharedPtr                mpReRasterSceneRenderer;
-    Fbo::SharedPtr                          mpReRasterFbo;
-    GraphicsProgram::SharedPtr              mpReRasterProgram;
-    GraphicsVars::SharedPtr                 mpReRasterVars;
-    GraphicsState::SharedPtr                mpReRasterGraphicsState;
+    //SceneRenderer::SharedPtr                mpReRasterSceneRenderer;
+    //Fbo::SharedPtr                          mpReRasterFbo;
+    //GraphicsProgram::SharedPtr              mpReRasterProgram;
+    //GraphicsVars::SharedPtr                 mpReRasterVars;
+    //GraphicsState::SharedPtr                mpReRasterGraphicsState;
 
     // Re-Raster Lighting
     Fbo::SharedPtr                          mpReRasterLightingFbo;
