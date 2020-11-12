@@ -55,7 +55,7 @@ void RightGather::initialize(const RenderData* pRenderData)
 
     GraphicsProgram::Desc preDepthProgDesc;
     preDepthProgDesc
-        .addShaderLibrary("StereoVS.slang").vsEntry("main")
+        .addShaderLibrary("DepthInVS.slang").vsEntry("main")
         .addShaderLibrary("RightGather.slang").psEntry("main");
 
     mpProgram = GraphicsProgram::create(preDepthProgDesc);
@@ -201,20 +201,16 @@ void RightGather::execute(RenderContext* pContext, const RenderData* pRenderData
     mpVars["PerFrameCB"]["gInvRightEyeView"] = glm::inverse(mpScene->getActiveCamera()->getRightEyeViewMatrix());
     mpVars["PerFrameCB"]["gInvRightEyeProj"] = glm::inverse(mpScene->getActiveCamera()->getRightEyeProjMatrix());
     mpVars["PerFrameCB"]["gLeftEyeViewProj"] = mpScene->getActiveCamera()->getViewProjMatrix();
-    mpVars["PerFrameCB"]["gRightEyeViewProj"] = mpScene->getActiveCamera()->getRightEyeViewProjMatrix();
-    mpVars["PerFrameCB"]["gViewportDims"] = vec2(mpFbo->getWidth(), mpFbo->getHeight());
 
-
-    logWarning("projectionMatRight:" + glm::to_string(mpScene->getActiveCamera()->getRightEyeProjMatrix()));
-    logWarning("getRightEyeViewMatrix:" + glm::to_string(mpScene->getActiveCamera()->getRightEyeViewMatrix()));
-    logWarning("RightEyeViewProjMatrix:" + glm::to_string(mpScene->getActiveCamera()->getRightEyeViewProjMatrix()));
-    logWarning("LeftEyeViewProjMatrix:" + glm::to_string(mpScene->getActiveCamera()->getViewProjMatrix()));
+    //logWarning("projectionMatRight:" + glm::to_string(mpScene->getActiveCamera()->getRightEyeProjMatrix()));
+    //logWarning("getRightEyeViewMatrix:" + glm::to_string(mpScene->getActiveCamera()->getRightEyeViewMatrix()));
+    //logWarning("RightEyeViewProjMatrix:" + glm::to_string(mpScene->getActiveCamera()->getRightEyeViewProjMatrix()));
+    //logWarning("LeftEyeViewProjMatrix:" + glm::to_string(mpScene->getActiveCamera()->getViewProjMatrix()));
 
     mpVars->setTexture("gLeftEyeTex", pRenderData->getTexture("leftIn"));
     mpVars->setSampler("gLinearSampler", mpLinearSampler);
     //mpVars->setTexture("gRightEyeDepthTex", pRenderData->getTexture("rightDepth"));
     mpVars->setTexture("gLeftEyeDepthTex", pRenderData->getTexture("leftDepth"));
-    mpVars->setSampler("gDepthCompSampler", mpLinearComparisonSampler);
 
     mpState->setFbo(mpFbo);
     //pContext->pushGraphicsState(mpState);
