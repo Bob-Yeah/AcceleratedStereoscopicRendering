@@ -21,12 +21,15 @@
 #include "RenderPasses/GBufferRaster.h"
 #include "RenderPasses/DebugOutput.h"
 #include "RenderPasses/Lighting.h"
-#include "RenderPasses/Reprojection.h"
+//#include "RenderPasses/Reprojection.h"
 #include "RenderPasses/SimpleShadowPass.h"
-#include "RenderPasses/WarpField.h"
-#include "RenderPasses/BackwardWarping.h"
+//#include "RenderPasses/WarpField.h"
+//#include "RenderPasses/BackwardWarping.h"
+#include "RenderPasses/RightDepth.h"
+#include "RenderPasses/RightGather.h"
 
-const std::string DeferredRenderer::skStartupScene = "Arcade/Arcade.fscene";
+
+const std::string DeferredRenderer::skStartupScene = "Arcade/Arcade-teapot.fscene";
 //const std::string DeferredRenderer::skStartupScene = "SimpleScene/simple.fscene";
 
 const glm::vec4 skClearColor = vec4(1.0f, 0, 0, 1.f);
@@ -57,19 +60,11 @@ void DeferredRenderer::onLoad(SampleCallbacks * pSample, RenderContext * pRender
     pLightPass->mpLightCamera = pShadowPass->mpLightCamera;
     mpGraph->addPass(pLightPass, "Light");
 
-    // Warp Field
-    WarpField::SharedPtr pWarpFieldPass = WarpField::create();
-    mpGraph->addPass(pWarpFieldPass, "WarpField");
+    RightDepth::SharedPtr pRightDepthPass = RightDepth::create();
+    mpGraph->addPass(pLightPass, "RightDepth");
 
-    // Backward Warping
-    BackwardWarping::SharedPtr pBackwardWarpingPass = BackwardWarping::create();
-    mpGraph->addPass(pBackwardWarpingPass, "BackwardWarping");
-
-    // Reprojection Pass (Raster and Ray Trace)
-    Reprojection::SharedPtr pReprojPass = Reprojection::create();
-    pReprojPass->mpMainRenderObject = this;
-    pReprojPass->mpLightPass = pLightPass;
-    mpGraph->addPass(pReprojPass, "Reprojection");
+    RightGather::SharedPtr pRightGatherPass = RightGather::create();
+    mpGraph->addPass(pLightPass, "RightDepth");
 
     // FXAA Pass Left
     FXAA::SharedPtr fxaaPassLeft = FXAA::create();
